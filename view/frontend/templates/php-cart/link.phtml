@@ -1,0 +1,151 @@
+<?php
+/**
+ * MageINIC
+ * Copyright (C) 2023 MageINIC <support@mageinic.com>
+ *
+ * NOTICE OF LICENSE
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see https://opensource.org/licenses/gpl-3.0.html.
+ *
+ * Do not edit or add to this file if you wish to upgrade this extension to newer
+ * version in the future.
+ *
+ * @category MageINIC
+ * @package Hyva_MageINICCouponList
+ * @copyright Copyright (c) 2023 MageINIC (https://www.mageinic.com/)
+ * @license https://opensource.org/licenses/gpl-3.0.html GNU General Public License,version 3 (GPL-3.0)
+ * @author MageINIC <support@mageinic.com>
+ */
+
+use Magento\Framework\Escaper;
+use Magento\Checkout\Block\Cart\Coupon;
+
+/** @var Coupon $block */
+/** @var Escaper $escaper  */
+$hasCouponCode = (bool)strlen($block->getCouponCode() ?: "");
+?>
+<div x-data="initCouponList()">
+    <a href="javascript:void(0)" @click.prevent="openModal()" class="text-blue-900">
+        <?= $escaper->escapeHtml(__('View Coupon List')) ?>
+    </a>
+    <template x-if="showModal">
+        <div x-cloak>
+            <div class="fixed z-50 inset-0 overflow-y-auto">
+                <div class="flex items-center justify-center min-h-screen">
+                    <div class="fixed inset-0 transition-opacity" aria-hidden="true" @click="closeModal()">
+                        <div class="absolute inset-0 bg-black opacity-75"></div>
+                    </div>
+                    <div class="bg-white rounded-lg w-9/12 mx-auto relative p-0 overflow-hidden" role="dialog" aria-modal="true"
+                         aria-labelledby="the-label">
+                        <div id="label">
+                            <div id="coupons-list">
+                                <div id="coupons">
+                                    <div class="flex flex-wrap">
+                                        <div class="bg-primary p-3 px-4 w-full text-white flex justify-between">
+                                            <span><?= $escaper->escapeHtml(__('Available Coupons')) ?></span>
+                                            <span @click="closeModal()" class="text-white">X</span>
+                                        </div>
+
+                                        <div class="w-full h-full p-4">
+                                            <div class="size">
+                                                <div class="results mt-4">
+                                                    <template x-for="(coupon, index) in getListOfCouponCodes() " :key="index">
+                                                        <div class="flex gap-4 items-start flex-col md:flex-row border border-dashed mb-4 p-3">
+                                                            <div x-text="coupon.coupon" class="w-32 shrink-0 border text-center border-dashed p-3"></div>
+                                                            <div class="flex flex-col">
+                                                                <div x-text="coupon.name" class="font-bold"></div>
+                                                                <p x-show="openCouponIndex !== index">
+                                                                    <span x-text="coupon.description.substring(0, 150)"></span>
+                                                                    <span x-show="coupon.description.length > 150">...</span>
+                                                                    <button @click="openCouponIndex = index">Read More</button>
+                                                                </p>
+                                                                <p x-show="openCouponIndex === index">
+                                                                    <span x-text="coupon.description"></span>
+                                                                    <button @click="openCouponIndex = null">Read Less</button>
+                                                                </p>
+                                                            </div>
+                                                            <div>
+                                                                <template
+                                                                    x-if="coupon.coupon !== coupon_code">
+                                                                <div class="primary">
+                                                                    <button
+                                                                        class="btn btn-primary shrink-0"
+                                                                        type="submit"
+                                                                        value="<?= $escaper->escapeHtmlAttr(__('Apply')) ?>"
+                                                                        @click.prevent="applyDiscount(coupon.coupon)">
+                                                                        <span><?= $escaper->escapeHtml(__('Apply')) ?></span>
+                                                                    </button>
+                                                                </div>
+                                                                </template>
+                                                                <template
+                                                                    x-if="hasCouponCode && coupon.coupon == coupon_code">
+                                                                    <div class="primary">
+                                                                        <button type="submit" class="btn btn-primary shrink-0"
+                                                                                value="<?= $escaper->escapeHtmlAttr(__('Cancel')) ?>"
+                                                                                @click.prevent="removeDiscount()">
+                                                                            <?= $escaper->escapeHtml(__('Cancel')) ?>
+                                                                        </button>
+                                                                    </div>
+                                                                </template>
+                                                            </div>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+<script>
+    "use strict";
+
+    function initCouponList() {
+        return {
+            showModal: false,
+            couponList: window.checkoutConfig.couponList,
+            coupon_code: '<?= $escaper->escapeJs($block->getCouponCode()) ?>',
+            hasCouponCode: <?= (int)$hasCouponCode ?>,
+            truncatedContent: '',
+            openCouponIndex:null,
+            openModal() {
+                this.showModal = true;
+            },
+            closeModal() {
+                this.showModal = false;
+            },
+            getListOfCouponCodes() {
+                return this.couponList;
+            },
+            applyDiscount(coupon_code) {
+                hyva.postForm({
+                    action: BASE_URL + 'checkout/cart/couponPost',
+                    data: {
+                        remove: 0,
+                        coupon_code: coupon_code
+                    }
+                })
+            },
+            removeDiscount() {
+                hyva.postForm({
+                    action: BASE_URL + 'checkout/cart/couponPost',
+                    data: {
+                        remove: 1
+                    }
+                })
+            }
+        }
+    }
+</script>
